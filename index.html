@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>NBMap Basic Example</title>
+    <link href="https://maps-gl.nextbillion.io/maps/api/css" rel="stylesheet" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        width: 100vw;
+        height: 100vh;
+      }
+      #add-route {
+        position: absolute;
+        top: 20px;
+        left: 45rem;
+        padding: 12px;
+        z-index: 99;
+      }
+      #remove-route {
+        position: absolute;
+        top: 20px;
+        left: 54rem;
+        padding: 12px;
+        z-index: 99;
+      }
+      #eta {
+        position: absolute;
+        top: 20px;
+        left: 65rem;
+        padding: 12px;
+        z-index: 99;
+      }
+      #eta {
+        position: absolute;
+        top: 20px;
+        left: 65rem;
+        padding: 12px;
+        z-index: 99;
+        width: 13rem;
+      }
+      .search {
+        position: absolute;
+        top: 20px;
+        padding: 12px;
+        z-index: 99;
+        left: 80px;
+      }
+      .search-destination {
+        position: absolute;
+        top: 20px;
+        padding: 12px;
+        z-index: 99;
+        left: 34rem;
+      }
+      #search-btn {
+        position: absolute;
+        top: 20px;
+        padding: 12px;
+        z-index: 99;
+        left: 16rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map">
+        <div class="input-container">
+            <input class="search" type="text" id="search" name="search" placeholder="Search">
+            <button id="search-btn">Search</button>
+
+            <button id="add-route">Request Direction</button>
+            <button id="remove-route">Remove Direction</button>
+            <input class="eta" type="text" id="eta" name="eta" placeholder="" disabled>
+
+
+        </div>
+
+    </div>
+
+    <script src="https://maps-gl.nextbillion.io/maps/api/js"></script>
+    <script>
+      (function () {
+        nextbillion.setApiKey("a991a2fd173e47459a4e9d9991fc000b");
+        nextbillion.setApiHost("api.nextbillion.io");
+
+        var map = new nextbillion.maps.Map(document.getElementById("map"), {
+          zoom: 12,
+          center: { lat: 30.71094636082637, lng: 76.72110904100698 }
+        });
+
+        var searchUrl = `https://api.nextbillion.io/h/discover?at=30.71094636082637,76.72110904100698&in=countryCode:IND&key=a991a2fd173e47459a4e9d9991fc000b&lang=EN&limit=20&q=`
+        var marker;
+        var searchedLocation = {};
+
+        let directionShapes = null;
+        document.getElementById("add-route").onclick = async function () {
+          if (directionShapes) {
+            map.removeDirections(directionShapes);
+            directionShapes = null;
+          }
+
+            const resp = await nextbillion.api.Directions({
+                origin: { lat: 30.71094636082637, lng: 76.72110904100698 },
+                destination: searchedLocation,
+                mode: '4w'
+            })
+
+            directionShapes = map.renderDirections(resp);
+            document.getElementById("eta").value = 'ETA:' +  (resp.routes[0].legs[0].duration.value / 60).toFixed(2) + ' mins' + ',' + 
+            'Distance:' +  (resp.routes[0].legs[0].distance.value / 1000).toFixed(2) + ' KM';
+        };
+
+        document.getElementById("remove-route").onclick = function () {
+          if (!directionShapes) {
+            return;
+          }
+          map.removeDirections(directionShapes);
+          directionShapes = null;
+        };
+
+        document.getElementById("search-btn").onclick = function () {
+            var searchValue = document.getElementById("search").value;
+            var apiUrl = searchUrl + searchValue;
+            fetch(apiUrl).then(response => {
+                return response.json();
+            }).then(data => {
+            // Work with JSON data here
+                const popup = new nextbillion.maps.Popup({
+                    offset: 25,
+                    closeButton: false
+                });
+                searchedLocation= { lat: data.items[0].access[0].lat, lng: data.items[0].access[0].lng };
+                if (directionShapes) {
+                    map.removeDirections(directionShapes);
+                    directionShapes = null;
+                }
+                if(marker && marker.options){
+                    marker.remove();
+                } 
+
+                marker = new nextbillion.maps.Marker({
+                    position: searchedLocation,
+                    map: map
+                })
+
+
+            }).catch(err => {
+            // Do something for an error here
+            console.log(err)
+            });
+        }
+      })();
+    </script>
+  </body>
+</html>
